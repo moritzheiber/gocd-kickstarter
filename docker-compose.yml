@@ -1,0 +1,25 @@
+version: "3"
+
+services:
+  go-server:
+    image: "gocd/gocd-server:v18.7.0"
+    ports:
+      - "8153:8153"
+    volumes:
+      - ./cruise-config.xml:/godata/config/cruise-config.xml
+    networks:
+      - gocd
+
+  go-agent:
+    image: "gocd/gocd-agent-alpine-3.7:v18.7.0"
+    environment:
+      GO_SERVER_URL: "https://go-server:8154/go"
+      AGENT_AUTO_REGISTER_KEY: "verysecurekey"
+      AGENT_AUTO_REGISTER_RESOURCES: "${GOCD_AUTO_REGISTER_RESOURCES:-gocd}"
+      AGENT_AUTO_REGISTER_HOSTNAME: "go-agent"
+    networks:
+      - gocd
+
+networks:
+  gocd:
+    driver: bridge

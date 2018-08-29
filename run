@@ -1,0 +1,107 @@
+#!/bin/bash
+
+set -Eeu -o pipefail
+
+GOCD_URL="${GO_URL:-http://localhost:8153/go/}"
+
+TERRAFORM_PROVIDER_VERSION="0.1.23"
+OPERATING_SYSTEM="$(uname -s)"
+GOCD_AUTO_REGISTER_RESOURCES="gocd"
+
+export GOCD_URL TERRAFORM_PROVIDER_VERSION OPERATING_SYSTEM GOCD_AUTO_REGISTER_RESOURCES
+
+_os_parameters(){
+  case "${OPERATING_SYSTEM}" in
+    'Darwin')
+      TERRAFORM_PROVIDER_DIRECTORY="terraform/.terraform/plugins/darwin_amd64"
+      TERRAFORM_PROVIDER_CHECKSUM="aa59c485da7776e816c539459c62c03081db733d1e71b67fc074645a527777fb"
+      TERRAFORM_PROVIDER_PLATFORM_PACKAGE_SUFFIX="zip"
+      TERRAFORM_PROVIDER_PLATFORM_SUFFIX="darwin-amd64.${TERRAFORM_PROVIDER_PLATFORM_PACKAGE_SUFFIX}"
+      ;;
+    'MINGW64_NT')
+      TERRAFORM_PROVIDER_DIRECTORY="terraform/.terraform/plugins/windows_amd64"
+      TERRAFORM_PROVIDER_CHECKSUM="c5b3bc7cf1635d9ee373aeab5a6dc2ed0b353f0e5b1a2107336d468a06c47fce"
+      TERRAFORM_PROVIDER_PLATFORM_PACKAGE_SUFFIX="zip"
+      TERRAFORM_PROVIDER_PLATFORM_SUFFIX="windows-amd64.${TERRAFORM_PROVIDER_PLATFORM_PACKAGE_SUFFIX}"
+      ;;
+    *)
+      TERRAFORM_PROVIDER_DIRECTORY="terraform/.terraform/plugins/linux_amd64"
+      TERRAFORM_PROVIDER_CHECKSUM="0fe5f8b63a73094d0ccb5a592b406adf3efedb58d53e80592b4ab278b32fb3a4"
+      TERRAFORM_PROVIDER_PLATFORM_PACKAGE_SUFFIX="tar.gz"
+      TERRAFORM_PROVIDER_PLATFORM_SUFFIX="linux-amd64.${TERRAFORM_PROVIDER_PLATFORM_PACKAGE_SUFFIX}"
+      ;;
+  esac
+
+  export TERRAFORM_PROVIDER_DIRECTORY TERRAFORM_PROVIDER_CHECKSUM TERRAFORM_PROVIDER_PLATFORM_PACKAGE_SUFFIX TERRAFORM_PROVIDER_PLATFORM_SUFFIX decode_opts
+}
+
+_ensure_terraform_provider() {
+  # shellcheck disable=SC2064
+  trap "rm -f .plugin.${TERRAFORM_PROVIDER_PLATFORM_PACKAGE_SUFFIX}" EXIT ERR
+
+  if ! [ -f "${TERRAFORM_PROVIDER_DIRECTORY}/terraform-provider-gocd_v${TERRAFORM_PROVIDER_VERSION}" ] ; then
+    echo "Downloading required provider \"gocd\" in version ${TERRAFORM_PROVIDER_VERSION}"
+    mkdir -p "${TERRAFORM_PROVIDER_DIRECTORY}"
+
+    curl -SsLo ".plugin.${TERRAFORM_PROVIDER_PLATFORM_PACKAGE_SUFFIX}" \
+      https://github.com/beamly/terraform-provider-gocd/releases/download/${TERRAFORM_PROVIDER_VERSION}/terraform-provider-gocd-${TERRAFORM_PROVIDER_VERSION}-${TERRAFORM_PROVIDER_PLATFORM_SUFFIX}
+
+    if [ "${OPERATING_SYSTEM}" == 'Darwin' ]; then
+      echo "${TERRAFORM_PROVIDER_CHECKSUM}  .plugin.${TERRAFORM_PROVIDER_PLATFORM_PACKAGE_SUFFIX}" | sha256sum --quiet -c -
+      unzip -qo -d "${TERRAFORM_PROVIDER_DIRECTORY}" .plugin.${TERRAFORM_PROVIDER_PLATFORM_PACKAGE_SUFFIX} terraform-provider-gocd
+      mv ${TERRAFORM_PROVIDER_DIRECTORY}/terraform-provider-gocd ${TERRAFORM_PROVIDER_DIRECTORY}/terraform-provider-gocd_v${TERRAFORM_PROVIDER_VERSION}
+    elif [ "${OPERATING_SYSTEM}" == 'MINGW64_NT' ]; then
+      echo "FIXME!"
+    else
+      echo "${TERRAFORM_PROVIDER_CHECKSUM}  .plugin.${TERRAFORM_PROVIDER_PLATFORM_PACKAGE_SUFFIX}" | sha256sum -c -
+      tar -x -C "${TERRAFORM_PROVIDER_DIRECTORY}" \
+        --transform="s/terraform-provider-gocd/terraform-provider-gocd_v${TERRAFORM_PROVIDER_VERSION}/" \
+        -f .plugin.${TERRAFORM_PROVIDER_PLATFORM_PACKAGE_SUFFIX} terraform-provider-gocd
+    fi
+  fi
+}
+
+_terraform() {
+  _ensure_terraform_provider
+
+  TF_VAR_pipeline_resources="${GOCD_AUTO_REGISTER_RESOURCES}"
+  export TF_VAR_pipeline_resources
+
+  (
+    cd terraform/ || true
+    terraform init
+    terraform "$@"
+  )
+}
+
+clean() {
+  rm -vf terraform/terraform.tfstate*
+
+  git checkout cruise-config.xml
+}
+
+_cleanup() {
+  docker-compose kill
+  docker-compose rm -fv
+}
+
+compose() {
+  trap _cleanup EXIT TERM
+  docker-compose up
+}
+
+_os_parameters
+
+usage() {
+    echo "Usage: $0 terraform [plan|apply] | compose | clean"
+    exit 0
+}
+
+CMD=${1:-}
+shift || true
+case ${CMD} in
+  terraform) _terraform "$@" ;;
+  compose) compose ;;
+  clean) clean ;;
+  *) usage ;;
+esac
