@@ -1,6 +1,6 @@
 # GoCD Kickstarter
 
-A repository which lets you get started with GoCD and its Terraform provider. You can use Terraform to fully express all of your pipelines as code.
+A repository which lets you get started with [GoCD](https://www.gocd.org) and its [Terraform provider](https://github.com/beamly/terraform-provider-gocd). You can use Terraform to fully express all of your pipelines as code.
 
 # Setup
 
