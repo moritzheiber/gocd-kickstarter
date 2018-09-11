@@ -83,6 +83,8 @@ clean() {
 _cleanup() {
   docker-compose kill
   docker-compose rm -fv
+
+  git checkout cruise-config.xml
 }
 
 compose() {

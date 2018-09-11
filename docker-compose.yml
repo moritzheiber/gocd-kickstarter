@@ -2,7 +2,7 @@ version: "3"
 
 services:
   go-server:
-    image: "gocd/gocd-server:v18.7.0"
+    image: "gocd/gocd-server:v18.9.0"
     ports:
       - "8153:8153"
     volumes:
@@ -11,7 +11,7 @@ services:
       - gocd
 
   go-agent:
-    image: "gocd/gocd-agent-alpine-3.7:v18.7.0"
+    image: "gocd/gocd-agent-alpine-3.8:v18.9.0"
     environment:
       GO_SERVER_URL: "https://go-server:8154/go"
       AGENT_AUTO_REGISTER_KEY: "verysecurekey"
