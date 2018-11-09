@@ -35,4 +35,4 @@ This will use Terraform to provision two simple pipelines, mostly `echo` stateme
 
 # TODO
 
-- Windows support
+- Windows support (technically, Windows is supported already, it just has never been tested)
