@@ -37,6 +37,7 @@ data "gocd_job_definition" "second_pipeline_job" {
   name = "second_job"
 
   resources = ["${var.pipeline_resources}"]
+  timeout   = "${var.default_timeout}"
 
   tasks = [
     "${data.gocd_task_definition.second_pipeline_first_task.json}",

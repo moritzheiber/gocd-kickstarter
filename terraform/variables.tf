@@ -1,5 +1,5 @@
 provider "gocd" {
-  version = "0.1.23"
+  version = "0.1.24"
 }
 
 variable "pipeline_group_name" {
@@ -15,6 +15,11 @@ variable "first_pipeline_name" {
 variable "second_pipeline_name" {
   type    = "string"
   default = "second_pipeline"
+}
+
+variable "default_timeout" {
+  type    = "string"
+  default = "10"
 }
 
 variable "pipeline_resources" {
