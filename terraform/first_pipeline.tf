@@ -8,6 +8,10 @@ resource "gocd_pipeline" "first_pipeline" {
     value = "I'm some variable!"
   }]
 
+  stages = [
+    "${data.gocd_stage_definition.first_pipeline_stage.json}",
+  ]
+
   materials = [
     {
       type = "git"
@@ -16,21 +20,18 @@ resource "gocd_pipeline" "first_pipeline" {
         name = "rbenv_git_repository"
         url  = "https://github.com/rbenv/rbenv"
 
-        filter = {
-          ignore = [
-            "README.md",
-            "LICENSE",
-            "CONDUCT.md",
-          ]
-        }
+        filter = [
+          "README.md",
+          "LICENSE",
+          "CONDUCT.md",
+        ]
       }
     },
   ]
 }
 
-resource "gocd_pipeline_stage" "first_pipeline_stage" {
-  name     = "first_stage"
-  pipeline = "${gocd_pipeline.first_pipeline.name}"
+data "gocd_stage_definition" "first_pipeline_stage" {
+  name = "first_stage"
 
   clean_working_directory = true
   fetch_materials         = true

@@ -8,6 +8,10 @@ resource "gocd_pipeline" "second_pipeline" {
     value = "I'm some other variable!"
   }]
 
+  stages = [
+    "${data.gocd_stage_definition.second_pipeline_stage.json}",
+  ]
+
   materials = [
     {
       type = "dependency"
@@ -15,15 +19,14 @@ resource "gocd_pipeline" "second_pipeline" {
       attributes {
         name     = "first_pipeline_dependency"
         pipeline = "${gocd_pipeline.first_pipeline.name}"
-        stage    = "${gocd_pipeline_stage.first_pipeline_stage.name}"
+        stage    = "${data.gocd_stage_definition.first_pipeline_stage.name}"
       }
     },
   ]
 }
 
-resource "gocd_pipeline_stage" "second_pipeline_stage" {
-  name     = "second_stage"
-  pipeline = "${gocd_pipeline.second_pipeline.name}"
+data "gocd_stage_definition" "second_pipeline_stage" {
+  name = "second_stage"
 
   clean_working_directory = true
   fetch_materials         = true

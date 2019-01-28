@@ -1,5 +1,5 @@
 provider "gocd" {
-  version = "0.1.24"
+  version = "1.0.0"
 }
 
 variable "pipeline_group_name" {
